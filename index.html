@@ -103,17 +103,29 @@
             const inputReports = collection.inputReports;
             for (let index = 0; index < inputReports.length; index++) {
               const report = inputReports[index];
-              iptLog.value += `InputReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+              let reportSize = 0;
+              for (const item of report.items) {
+                reportSize += item.reportSize * item.reportCount;
+              }
+              iptLog.value += `InputReports: index=${index}, reportId=${report.reportId}, btyeLength=${reportSize / 8}\n\n`;
             }
             const outputReports = collection.outputReports;
             for (let index = 0; index < outputReports.length; index++) {
               const report = outputReports[index];
-              iptLog.value += `OutputReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+              let reportSize = 0;
+              for (const item of report.items) {
+                reportSize += item.reportSize * item.reportCount;
+              }
+              iptLog.value += `OutputReports: index=${index}, reportId=${report.reportId}, btyeLength=${reportSize / 8}\n\n`;
             }
             const featureReports = collection.featureReports;
             for (let index = 0; index < featureReports.length; index++) {
               const report = featureReports[index];
-              iptLog.value += `FeatureReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+              let reportSize = 0;
+              for (const item of report.items) {
+                reportSize += item.reportSize * item.reportCount;
+              }
+              iptLog.value += `FeatureReports: index=${index}, reportId=${report.reportId}, btyeLength=${reportSize / 8}\n\n`;
             }
             iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
           }
