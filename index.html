@@ -95,7 +95,7 @@
           if (!device.opened) {
             // 检查设备是否打开
             await device.open(); // 打开设备
-            iptLog.value += `Open device: ${device.productName} vendorId-${device.vendorId} productId-${device.productId}\n\n`;
+            iptLog.value += `Open device: ${device.productName}\nDevice: vendorId=${device.vendorId}, productId=${device.productId}\n\n`;
 
             // 下面几行代码和我的自定义的透传的HID设备有关
             // 设备中有一个collection，包含一个inputReports、一个outputReports、一个featureReports
@@ -197,14 +197,14 @@
       // 全局HID设备插入事件
       navigator.hid.onconnect = (event) => {
         console.log("HID connected: ", event.device); // device 的 collections 可以看到设备报告描述符相关信息
-        iptLog.value += `HID connected:\n${event.device.productName}\nPID ${event.device.productId} VID ${event.device.vendorId}\n\n`;
+        iptLog.value += `HID connected: ${event.device.productName}\nDevice: vendorId=${event.device.vendorId}, productId=${event.device.productId}\n\n`;
         iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
       };
 
       // 全局HID设备拔出事件
       navigator.hid.ondisconnect = (event) => {
         device = null; // 释放当前设备
-        iptLog.value += `HID disconnected:\n${event.device.productName}\nPID ${event.device.productId} VID ${event.device.vendorId}\n\n`;
+        iptLog.value += `HID disconnected: ${event.device.productName}\nnDevice: vendorId=${event.device.vendorId}, productId=${event.device.productId}\n\n`;
         iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
       };
     </script>
