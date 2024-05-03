@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HID Passthrough Tool</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100vh;
+        background-color: #f7f7ff;
+      }
+
+      div {
+        height: calc(100% - 4rem);
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 2rem 1fr;
+        row-gap: 1rem;
+        column-gap: 2rem;
+      }
+
+      textarea {
+        resize: none;
+        overflow-y: scroll;
+        overflow-x: hidden;
+        padding: 1rem;
+      }
+    </style>
+    <script>
+      if ("hid" in navigator) {
+        // 浏览器支持hid
+      } else {
+        alert("Your browser is not support Web HID API.");
+      }
+    </script>
+  </head>
+
+  <body>
+    <div>
+      <button id="btnOpen">open</button>
+      <button id="btnSend">send</button>
+      <button id="btnClear">clear</button>
+      <textarea id="iptLog" readonly></textarea>
+      <textarea id="iptOutput">03 01 0F 0F 0F 0F 0F 0F 02</textarea>
+      <textarea id="iptInput" readonly></textarea>
+    </div>
+    <script>
+      const btnOpen = document.querySelector("#btnOpen");
+      const btnSend = document.querySelector("#btnSend");
+      const btnClear = document.querySelector("#btnClear");
+      const iptLog = document.querySelector("#iptLog");
+      const iptOutput = document.querySelector("#iptOutput");
+      const iptInput = document.querySelector("#iptInput");
+
+      iptLog.value += "HID Passthrough Tool\n\n";
+      iptLog.value += "This is an HID Passthrough device read/write Tool.\n\n";
+      iptLog.value += "Device must have one collection with one input and one output.\n\n";
+      iptLog.value += "For more detail see below:\n\n";
+      iptLog.value += "https://github.com/NaisuXu/HID_Passthrough_Tool\n\n";
+      iptLog.value += "《STM32 USB使用记录：HID类设备（后篇）》\nhttps://blog.csdn.net/Naisu_kun/article/details/131880999\n\n";
+      iptLog.value += "《使用 Web HID API 在浏览器中进行HID设备交互（纯前端）》\nhttps://blog.csdn.net/Naisu_kun/article/details/132539918\n\n";
+
+      // 需要连接或已连接的设备
+      let device = null;
+
+      // 打开设备相关操作
+      btnOpen.onclick = async () => {
+        try {
+          // getDevices方法可以返回已连接的授权过的设备列表
+          // let devices = await navigator.hid.getDevices();
+          // requestDevice方法将显示一个包含已连接设备列表的对话框，用户选择可以并授予其中一个设备访问权限
+          const devices = await navigator.hid.requestDevice({
+            filters: [{
+              // vendorId: 0x045E,
+              // productId: 0x0B13,
+              usagePage: 0x01,
+              usage: 0x05
+            }]
+          });
+          
+          if (devices.length == 0) {
+            iptLog.value += "No device selected\n\n";
+            iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+            return;
+          }
+
+          device = devices[0]; // 选择列表中第一个设备
+          if (!device.opened) {
+            // 检查设备是否打开
+            await device.open(); // 打开设备
+            iptLog.value += `Open device: ${device.productName} vendorId-${device.vendorId} productId-${device.productId}\n\n`;
+
+            // 下面几行代码和我的自定义的透传的HID设备有关
+            // 设备中有一个collection，包含一个inputReports、一个outputReports、一个featureReports
+            const collection = device.collections[0];
+            const inputReports = collection.inputReports;
+            for (let index = 0; index < inputReports.length; index++) {
+              const report = inputReports[index];
+              iptLog.value += `InputReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+            }
+            const outputReports = collection.outputReports;
+            for (let index = 0; index < outputReports.length; index++) {
+              const report = outputReports[index];
+              iptLog.value += `OutputReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+            }
+            const featureReports = collection.featureReports;
+            for (let index = 0; index < featureReports.length; index++) {
+              const report = featureReports[index];
+              iptLog.value += `FeatureReports: index=${index}, reportId=${report.reportId}, btyeLength=${report.items.length}\n\n`;
+            }
+            iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+          }
+          // await device.close(); // 关闭设备
+          // await device.forget() // 遗忘设备
+          // 电脑接收到来自设备的消息回调
+          device.oninputreport = (event) => {
+            console.log(event); // event中包含device、reportId、data等内容
+            let array = new Uint8Array(event.data.buffer); // event.data.buffer就是接收到的inputreport包数据了
+            let hexstr = "";
+            for (const data of array) {
+              hexstr += data.toString(16).toUpperCase().padStart(2, '0'); // 将字节数据转换成（XX）形式字符串
+              hexstr += "  "
+            }
+            iptInput.value += `${hexstr}\n\n`;
+            iptInput.scrollTop = iptInput.scrollHeight; // 滚动到底部
+
+            iptLog.value += `ReportId ${event.reportId} received ${event.data.byteLength} bytes\n\n`;
+            iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+          };
+        } catch (error) {
+          iptLog.value += `${error}\n\n`;
+          iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+        }
+      };
+
+      // 发送数据相关操作
+      btnSend.onclick = async () => {
+        try {
+          if (!device?.opened) {
+            throw "Device not opened";
+          }
+
+          const outputDataStr = iptOutput.value.replace(/\s+/g, ""); // 去除所有空白字符
+          // 检查长度和字符是否正确
+          if (outputDataStr.length < 2 || outputDataStr.length % 2 != 0) {
+            throw "Data length is incorrect ";
+          }
+          // 检查长度和字符是符合正则
+          if (/^[0-9a-fA-F]+$/.test(outputDataStr) === false) {
+            throw "Data is not even or 0-9、a-f、A-F";
+          }
+          
+          // 截取reportId
+          const reportId = parseInt(outputDataStr.substr(0, 2), 16);
+          // 截取发送的数据
+          const reportDataStr = outputDataStr.substr(2, outputDataStr.length - 2);
+          const reportLength = reportDataStr.length / 2;
+          const reportData = new Uint8Array(reportLength); // 要发送的数据包
+          // 将字符串转成字节数组数据
+          for (let index = 0; index < reportLength; index++) {
+            reportData[index] = parseInt(reportDataStr.substr(index * 2, 2), 16);
+          }
+          await device.sendReport(reportId, reportData); // 发送数据，第一个参数为reportId，填0表示不使用reportId
+
+          iptLog.value += `ReportId ${reportId} send ${reportData.length} bytes\n\n`;
+          iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+        } catch (error) {
+          iptLog.value += `${error}\n\n`;
+          iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+        }
+      };
+
+      // 清空数据接收窗口
+      btnClear.onclick = () => {
+        iptInput.value = "";
+      };
+
+      // 全局HID设备插入事件
+      navigator.hid.onconnect = (event) => {
+        console.log("HID connected: ", event.device); // device 的 collections 可以看到设备报告描述符相关信息
+        iptLog.value += `HID connected:\n${event.device.productName}\nPID ${event.device.productId} VID ${event.device.vendorId}\n\n`;
+        iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+      };
+
+      // 全局HID设备拔出事件
+      navigator.hid.ondisconnect = (event) => {
+        device = null; // 释放当前设备
+        iptLog.value += `HID disconnected:\n${event.device.productName}\nPID ${event.device.productId} VID ${event.device.vendorId}\n\n`;
+        iptLog.scrollTop = iptLog.scrollHeight; // 滚动到底部
+      };
+    </script>
+  </body>
+
+</html>

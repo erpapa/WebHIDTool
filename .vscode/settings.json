@@ -1,0 +1,8 @@
+{
+  "github.copilot.advanced": {
+    "debug.overrideEngine": "codegen",
+    "debug.testOverrideProxyUrl": "http://127.0.0.1:12345",
+    "debug.overrideProxyUrl": "http://127.0.0.1:12345"
+  },
+  "fauxpilot.server": "http://localhost:12345/v1/engines"
+}
